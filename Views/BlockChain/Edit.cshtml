@@ -1,0 +1,41 @@
+﻿@model BlockChain.Models.Block
+
+<div class="container mt-5">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white text-center rounded-top-4">
+            <h4 class="mb-0">Edit Block</h4>
+        </div>
+
+        <div class="card-body p-4">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="Index" />
+
+                <div class="mb-3">
+                    <label asp-for="Data" class="form-label fw-semibold">Block Data</label>
+                    <input asp-for="Data" class="form-control" placeholder="Enter block data" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="PrevHash" class="form-label fw-semibold">Previous Hash</label>
+                    <input asp-for="PrevHash" class="form-control" readonly />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Hash" class="form-label fw-semibold">Hash</label>
+                    <input asp-for="Hash" class="form-control" readonly />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Timestamp" class="form-label fw-semibold">Timestamp</label>
+                    <input asp-for="Timestamp" class="form-control" readonly />
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-success px-4 me-2">💾 Save</button>
+                    <a asp-action="Index" class="btn btn-secondary px-4">↩ Back</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
