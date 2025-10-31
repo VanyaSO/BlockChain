@@ -1,4 +1,5 @@
-﻿using BlockChain.Data;
+﻿using System.Security.Cryptography;
+using BlockChain.Data;
 using BlockChain.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,16 +19,35 @@ public class BlockChainService
         return await _context.Blocks.OrderBy(b => b.Index).ToListAsync();
     }
 
-    public async Task AddBlockAsync(string data)
+    public async Task AddBlockAsync(string data, string privateKeyXml)
     {
-        var blocks = await GetAllBlocksAsync();
-        var prevBlock = blocks.LastOrDefault();
+        try
+        {
+            var blocks = await GetAllBlocksAsync();
+            var prevBlock = blocks.LastOrDefault();
 
-        if (prevBlock == null) return;
+            if (prevBlock == null) return;
 
-        var newBlock = new Block(blocks.Count, data, prevBlock.Hash);
-        _context.Blocks.Add(newBlock);
-        await _context.SaveChangesAsync();
+            var newBlock = new Block(blocks.Count, data, prevBlock.Hash);
+
+            var publicKeyXml = GetPublicKeyFromPrivate(privateKeyXml);
+            if (string.IsNullOrEmpty(publicKeyXml))
+                throw new Exception("Public key could not be found.");
+
+            using var rsa = RSA.Create();
+            rsa.FromXmlString(privateKeyXml);
+            var privateParams = rsa.ExportParameters(true);
+
+            newBlock.Sign(privateParams, publicKeyXml);
+
+            _context.Blocks.Add(newBlock);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[AddBlockAsync] {e.GetType().Name}: {e.Message}");
+            throw new ApplicationException("Invalid private key. Please try again with a valid key.");
+        }
     }
 
     public async Task<Block?> GetBlockByIndexAsync(int index)
@@ -99,5 +119,36 @@ public class BlockChainService
         }
 
         return result;
+    }
+    
+    public string GeneratePrivateKeyXml()
+    {
+        using var rsa = RSA.Create();
+        return rsa.ToXmlString(true);
+    }
+    
+    public string? GetPublicKeyFromPrivate(string privateKeyXml)
+    {
+        try
+        {
+            using var rsa = RSA.Create();
+            rsa.FromXmlString(privateKeyXml);
+            return rsa.ToXmlString(false);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GetPublicKeyFromPrivate] Invalid key: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<BlockValidationViewModel>> GetSignatureValidationAsync()
+    {
+        var blocks = await GetAllBlocksAsync();
+        return blocks.Select(b => new BlockValidationViewModel
+        {
+            Block = b,
+            IsValid = b.Verify()
+        }).ToList();
     }
 }

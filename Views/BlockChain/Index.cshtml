@@ -5,7 +5,6 @@
     ViewData["Title"] = "Index";
 }
 
-
 @if (ViewBag.IsChainValid == true)
 {
     <h2>Blockchain is valid</h2>
@@ -15,66 +14,99 @@ else
     <h2>Blockchain integrity compromised!</h2>
 }
 
-<div class="mb-3">
+<div class="my-4">
     <div class="row g-3">
         <div class="col-md-3">
-            <form method="post" asp-action="Add">
-                <div class="input-group">
-                    <input type="text" name="data" class="form-control" placeholder="Enter block data" required />
-                    <button type="submit" class="btn btn-success">Add block</button>
-                </div>
+            <form method="post" asp-action="Add" class="d-flex flex-column gap-2">
+                <input type="text" name="data" class="form-control" placeholder="Enter block data" required/>
+                <input type="password" id="privateKeyInput" name="privateKey" class="form-control"
+                       placeholder="Enter private key" required>
+                <button type="submit" class="btn btn-primary">Add block</button>
             </form>
+            <button type="button" class="btn btn-primary mt-2 w-100" data-bs-toggle="modal" data-bs-target="#keyModal">
+                Generate Private Key
+            </button>
         </div>
     </div>
 </div>
 
+@if (ViewBag.AlertMessage != null)
+{
+    <div class="alert @(ViewBag.AlertType == "Error" ? "alert-danger" : "alert-success")" role="alert">
+        @ViewBag.AlertMessage
+    </div>
+}
 
 <table class="table">
     <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Block.Index)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Block.Data)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Block.PrevHash)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Block.Hash)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Block.Timestamp)
-            </th>
-            <th></th>
-        </tr>
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => model.Block.Index)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Block.Data)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Block.PrevHash)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Block.Hash)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Block.Timestamp)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Block.Signature)
+        </th>
+        <th>Signature Status</th>
+        <th></th>
+    </tr>
     </thead>
     <tbody>
-        @{
-            var blockList = Model.ToList();
-        }
-        @for (int i = 0; i < blockList.Count; i++)
-        {
-            var item = blockList[i];
-            bool isValid = item.IsValid;
-            string validResult = isValid ? "table-success" : "table-danger"; 
-            Block block = item.Block;
+    @{
+        var blockList = Model.ToList();
+    }
+    @for (int i = 0; i < blockList.Count; i++)
+    {
+        var item = blockList[i];
+        bool isValid = item.IsValid;
+        string validResult = isValid ? "table-success" : "table-danger";
+        Block block = item.Block;
 
-            <tr class="@(validResult)">
-                <td>@block.Index</td>
-                <td>@block.Data</td>
-                <td>@block.PrevHash</td>
-                <td>@block.Hash</td>
-                <td>
-                    @item.Block.Timestamp.ToString("d MMMM yyyy 'р.', HH:mm:ss", 
-                        new CultureInfo("uk-UA"))
-                </td>
-                <td>
-                    @Html.ActionLink("Edit", "Edit", new { index = block.Index })
-                </td>
-            </tr>
-        }
-
+        <tr class="@(validResult)">
+            <td>@block.Index</td>
+            <td>@block.Data</td>
+            <td>@(block.PrevHash.Length > 16 ? block.PrevHash.Substring(0, 16) + "..." : block.PrevHash)</td>
+            <td>@(block.Hash.Substring(0, 18) + "...")</td>
+            <td>
+                @item.Block.Timestamp.ToString("d MMMM yyyy 'р.', HH:mm:ss",
+                    new CultureInfo("uk-UA"))
+            </td>
+            <td>
+                @Html.ActionLink("Edit", "Edit", new { index = block.Index })
+            </td>
+            <td title="@block.Signature" onclick="copyToClipboard('@block.Signature')"
+                style="cursor:pointer;">
+                @(block.Signature?.Length > 16
+                    ? block.Signature.Substring(0, 16) + "..."
+                    : block.Signature)
+            </td>
+            <td>
+                <span class="badge @(item.IsSignatureValid ? "bg-success" : "bg-danger")">
+                    @(item.IsSignatureValid ? "Valid" : "Invalid")
+                </span>
+            </td>
+        </tr>
+    }
     </tbody>
 </table>
+
+@await Html.PartialAsync("_GeneratePKeyModalPartial")
+
+@section Scripts {
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+        }
+    </script>
+}
